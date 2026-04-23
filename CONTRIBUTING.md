@@ -12,6 +12,34 @@
     - Asegúrate de que los tests pasen (`pytest`).
     - Envía un *Pull Request*.
 
+## Desarrollo Local
+
+Si deseas contribuir al código, por favor asegúrate de seguir estos pasos antes de abrir un Pull Request:
+
+1. **Instalar dependencias de desarrollo**:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+2. **Verificar el estilo (Linting)**:
+   ```bash
+   ruff check src tests
+   ```
+
+3. **Verificar el tipado**:
+   ```bash
+   mypy src/face_match
+   ```
+
+4. **Ejecutar los tests**:
+   ```bash
+   pytest
+   ```
+
+Mantenemos una barra de calidad alta; el CI de GitHub no permitirá fusiones si estos comandos fallan.
+
+## Proceso de Pull Request
+
 ## Estándares de Código
 
 - Usamos **anotaciones de tipos** (type hints) en todas las funciones nuevas.

@@ -6,9 +6,10 @@ Todas las novedades notables de este proyecto serán documentadas en este archiv
 ### Añadido
 - **Motor FAISS**: Integración de búsqueda vectorial para alto rendimiento en grandes bases de datos.
 - **Arquitectura SDK**: Nueva función `find_matches` que devuelve resultados como diccionarios/listas, desacoplando la lógica de la impresión en consola.
+- **Infraestructura de Calidad**: Pipeline de CI con Ruff (linting), Mypy (strict typing) y tests multiplataforma (Linux/Windows).
 - **Soporte GPU**: Parámetro `--device gpu` para aceleración por hardware (OpenCV + FAISS).
 - **Validación de Integridad**: Comprobación de Hash SHA256 para la descarga automática de modelos ONNX.
-- **Tipado**: Inclusión de archivo `py.typed` para soporte de static typing (mypy).
+- **Tipado**: Inclusión de archivo `py.typed` y definición de `SearchResponse` (TypedDict) para el SDK.
 
 ### Corregido
 - Bug en el ordenamiento de similitud de Coseno (ahora muestra los más parecidos arriba).

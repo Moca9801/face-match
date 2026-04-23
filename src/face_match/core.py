@@ -105,9 +105,9 @@ def pick_best_face(faces: np.ndarray | None) -> np.ndarray | None:
         return None
     f = np.atleast_2d(faces)
     if f.shape[1] < 15:
-        return f[0]
+        return f[0]  # type: ignore[no-any-return]
     scores = f[:, 14]
-    return f[int(np.argmax(scores))]
+    return f[int(np.argmax(scores))]  # type: ignore[no-any-return]
 
 
 def embed(
@@ -117,25 +117,28 @@ def embed(
 ) -> np.ndarray | None:
     h, w = bgr.shape[:2]
     detector.setInputSize((w, h))
-    _, faces = detector.detect(bgr)
-    row = pick_best_face(faces)
-    if row is None:
-        return None
-    aligned = recognizer.alignCrop(bgr, row)
-    return recognizer.feature(aligned)
+    faces = detector.detect(bgr)
+    if faces[1] is not None:
+        face = faces[1][0]
+        aligned = recognizer.alignCrop(bgr, face)
+        feat = recognizer.feature(aligned)
+        return feat
+
+    return None
 
 
-def load_cache(cache_path: Path) -> dict:
+def load_cache(cache_path: Path) -> dict[str, tuple[float, np.ndarray]]:
     if not cache_path.is_file():
         return {}
     try:
         with open(cache_path, "rb") as f:
-            return pickle.load(f)
+            data = pickle.load(f)
+            return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
 
-def save_cache(cache_path: Path, data: dict) -> None:
+def save_cache(cache_path: Path, data: dict[str, tuple[float, np.ndarray]]) -> None:
     tmp = cache_path.with_suffix(".tmp")
     with open(tmp, "wb") as f:
         pickle.dump(data, f, protocol=4)

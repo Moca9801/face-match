@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import cv2
 import faiss
@@ -80,17 +80,17 @@ def find_matches(
     recognizer = cv2.FaceRecognizerSF.create(str(rec_path), "")
 
     if device == "gpu":
-        detector.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        detector.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-        recognizer.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        recognizer.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        detector.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  # type: ignore[attr-defined]
+        detector.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)  # type: ignore[attr-defined]
+        recognizer.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  # type: ignore[attr-defined]
+        recognizer.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)  # type: ignore[attr-defined]
 
     q_feat = embed(q_img, detector, recognizer)
     if q_feat is None:
         raise ValueError("No se detectó ningún rostro en la imagen de consulta.")
 
     cache_path = db / CACHE_NAME
-    cache: dict = {} if rebuild_cache else load_cache(cache_path)
+    cache: dict[str, tuple[float, np.ndarray]] = load_cache(cache_path) if not rebuild_cache else {}
     
     all_feats = []
     all_paths = []
@@ -131,14 +131,14 @@ def find_matches(
         save_cache(cache_path, cache)
 
     if not all_feats:
-        return {
+        return cast(SearchResponse, {
             "query": query, "db": db, "total_scanned": len(images),
             "with_face": 0, "results": [], "metric": "coseno" if distance == 0 else "L2",
             "threshold": threshold, "engine": "FAISS", "device": "CPU"
-        }
+        })
 
     xb = np.array(all_feats).astype("float32")
-    xq = q_feat.reshape(1, -1).astype("float32")
+    xq: np.ndarray = q_feat.reshape(1, -1).astype("float32")
     
     if distance == 0:
         faiss.normalize_L2(xb)
@@ -182,7 +182,7 @@ def find_matches(
 
     results.sort(key=lambda x: x["distance"], reverse=(distance == 0))
 
-    return {
+    return cast(SearchResponse, {
         "query": query,
         "db": db,
         "total_scanned": len(images),
@@ -192,7 +192,7 @@ def find_matches(
         "threshold": threshold,
         "engine": "FAISS",
         "device": used_device
-    }
+    })
 
 
 def run_search(
