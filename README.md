@@ -58,7 +58,21 @@ Opciones:
 | `--top` | `-n` | Máximo de resultados a mostrar (por defecto 10) |
 | `--threshold`| `-t` | Umbral de similitud. (Coseno defecto: `0.363`, L2 defecto: `1.128`) |
 | `--metric` | - | `cosine` (por defecto) o `l2` |
+| `--device` | - | Dispositivo de procesamiento: `cpu` (por defecto) o `gpu` |
 | `--rebuild` | - | Ignora la caché y vuelve a extraer embeddings |
+
+### ¿Cuándo usar CPU vs GPU?
+
+El sistema es muy eficiente por defecto, pero puedes optimizarlo según tu hardware:
+
+*   **Usar CPU (Por defecto):**
+    *   Galerías pequeñas o medianas (< 10,000 fotos).
+    *   Si no tienes una tarjeta NVIDIA configurada con CUDA.
+    *   Para uso general en laptops, ya que consume menos energía.
+*   **Usar GPU (`--device gpu`):**
+    *   Galerías masivas (> 100,000 fotos).
+    *   Cuando realizas un escaneo inicial pesado (`--rebuild`) y tienes una tarjeta NVIDIA.
+    *   **Nota:** Requiere drivers de NVIDIA instalados y que las librerías (`opencv-python` con CUDA y `faiss-gpu`) sean compatibles con tu sistema. Si pides `gpu` y no está disponible, el sistema hará un *fallback* automático a `cpu`.
 
 ### Cómo interpretar los resultados
 
