@@ -74,7 +74,8 @@ class TestThresholdFiltering:
                 return 0.1  # similitud baja para este test
         
         monkeypatch.setattr(_search_module, "ensure_model", _stub_ensure_model)
-        monkeypatch.setattr(_search_module, "embed", _make_embed_stub([0.1, 0.1, 0.1, 0.1]))
+        # Usamos una lista más larga para que la consulta (idx 0) no coincida con ninguna imagen de la galería (idxs 1, 2, 3, 4)
+        monkeypatch.setattr(_search_module, "embed", _make_embed_stub([0.1] * 10))
         monkeypatch.setattr(_search_module, "load_bgr", lambda p: np.zeros((10, 10, 3), dtype=np.uint8))
         monkeypatch.setattr("cv2.FaceDetectorYN.create", lambda *a, **kw: object())
         monkeypatch.setattr("cv2.FaceRecognizerSF.create", lambda *a, **kw: FakeRecognizer())

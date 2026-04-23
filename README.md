@@ -51,25 +51,23 @@ face-match consulta.jpg --rebuild
 
 ## Uso como Librería (SDK)
 
-Puedes integrar el motor de búsqueda en tus propios scripts de Python de forma sencilla:
+Puedes integrar el motor de búsqueda en tus propios scripts para recibir resultados estructurados (diccionarios y listas) sin ensuciar la consola:
 
 ```python
 from pathlib import Path
-from face_match import run_search
+from face_match import find_matches
 
-# Ejecutar búsqueda programáticamente
-status = run_search(
+# Ejecutar búsqueda programática
+data = find_matches(
     query=Path("rostro.jpg"),
     db=Path("./galeria"),
     top=5,
-    distance=0,       # 0 para Coseno, 1 para L2
-    rebuild_cache=False,
-    threshold=0.363,
-    device="cpu"      # "cpu" o "gpu"
+    threshold=0.4
 )
 
-if status == 0:
-    print("Búsqueda completada con éxito")
+print(f"Escaneadas: {data['total_scanned']} fotos")
+for res in data["results"]:
+    print(f"Coincidencia: {res['path']} (Distancia: {res['distance']:.4f})")
 ```
 
 Opciones:
