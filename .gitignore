@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+*.iml
+
+# Windows / macOS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Modelos ONNX (caché del usuario; por defecto ~/.cache/face_match/)
+*.onnx
+*.onnx.part
+
+# Caché de embeddings junto a la galería
+database/.face_embeddings_cache.pkl
+database/gallery
