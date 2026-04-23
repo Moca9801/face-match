@@ -1,3 +1,9 @@
-"""Búsqueda de coincidencias faciales en una galería local de imágenes."""
+# -*- coding: utf-8 -*-
+"""
+face-match: Motor de búsqueda de rostros basado en OpenCV y FAISS.
+"""
 
-__version__ = "0.1.0"
+from .search import run_search
+
+__version__ = "0.2.0"
+__all__ = ["run_search"]

@@ -49,6 +49,29 @@ face-match consulta.jpg --threshold 0.5
 face-match consulta.jpg --rebuild
 ```
 
+## Uso como Librería (SDK)
+
+Puedes integrar el motor de búsqueda en tus propios scripts de Python de forma sencilla:
+
+```python
+from pathlib import Path
+from face_match import run_search
+
+# Ejecutar búsqueda programáticamente
+status = run_search(
+    query=Path("rostro.jpg"),
+    db=Path("./galeria"),
+    top=5,
+    distance=0,       # 0 para Coseno, 1 para L2
+    rebuild_cache=False,
+    threshold=0.363,
+    device="cpu"      # "cpu" o "gpu"
+)
+
+if status == 0:
+    print("Búsqueda completada con éxito")
+```
+
 Opciones:
 
 | Opción | Atajo | Descripción |

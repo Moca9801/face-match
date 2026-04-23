@@ -16,8 +16,25 @@ IMAGE_EXTENSIONS: frozenset[str] = frozenset(
 MODELS_BASE = "https://github.com/opencv/opencv_zoo/raw/main/models"
 YUNET_NAME = "face_detection_yunet/face_detection_yunet_2023mar.onnx"
 SFACE_NAME = "face_recognition_sface/face_recognition_sface_2021dec.onnx"
+
+# Hashes SHA256 oficiales para garantizar integridad y seguridad
+MODEL_HASHES = {
+    "face_detection_yunet_2023mar.onnx": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+    "face_recognition_sface_2021dec.onnx": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+}
+
 CACHE_NAME = ".face_embeddings_cache.pkl"
 ENV_MODELS = "FACE_MATCH_MODELS"
+
+
+def _calculate_sha256(path: Path) -> str:
+    import hashlib
+
+    sha256_hash = hashlib.sha256()
+    with open(path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
 
 
 def get_models_dir() -> Path:
@@ -33,32 +50,40 @@ def get_models_dir() -> Path:
 def ensure_model(filename: str) -> Path:
     name = filename.split("/")[-1]
     path = get_models_dir() / name
-    if path.is_file() and path.stat().st_size > 1000:
-        return path
+    expected_hash = MODEL_HASHES.get(name)
+
+    # Si el archivo existe, verificar integridad antes de usarlo
+    if path.is_file():
+        if expected_hash and _calculate_sha256(path) == expected_hash:
+            return path
+        else:
+            print(f"Modelo '{name}' corrupto o antiguo. Redescargando...", file=sys.stderr)
+
     url = f"{MODELS_BASE}/{filename}"
     print(f"Descargando modelo: {name} (puede tardar)...", file=sys.stderr)
     part = path.with_suffix(path.suffix + ".part")
     try:
-        # Timeout de 60 s de conexión + 300 s de lectura para redes lentas
         with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310
             with open(part, "wb") as f:
                 while True:
-                    chunk = response.read(1 << 16)  # 64 KB por bloque
+                    chunk = response.read(1 << 16)
                     if not chunk:
                         break
                     f.write(chunk)
     except Exception as exc:
         part.unlink(missing_ok=True)
-        raise RuntimeError(
-            f"No se pudo descargar el modelo '{name}'. "
-            f"Verifica tu conexión a Internet. Detalle: {exc}"
-        ) from exc
-    # Validación mínima de integridad: el modelo debe pesar más de 1 MB
-    if part.stat().st_size < 1_000_000:
-        part.unlink(missing_ok=True)
-        raise RuntimeError(
-            f"El archivo descargado '{name}' parece estar corrupto (tamaño inesperadamente pequeño)."
-        )
+        raise RuntimeError(f"Error descargando '{name}': {exc}") from exc
+
+    # Verificación de integridad por Hash
+    if expected_hash:
+        actual_hash = _calculate_sha256(part)
+        if actual_hash != expected_hash:
+            part.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"Error de integridad en '{name}': El hash no coincide. "
+                "La descarga podría haber sido interceptada o estar incompleta."
+            )
+
     part.replace(path)
     return path
 
