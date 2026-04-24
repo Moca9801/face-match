@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-import pickle
+import json
 import sys
 import urllib.request
 from pathlib import Path
@@ -23,7 +23,7 @@ MODEL_HASHES = {
     "face_recognition_sface_2021dec.onnx": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
 }
 
-CACHE_NAME = ".face_embeddings_cache.pkl"
+CACHE_NAME = ".face_embeddings_cache.json"
 ENV_MODELS = "FACE_MATCH_MODELS"
 
 
@@ -128,18 +128,29 @@ def embed(
 
 
 def load_cache(cache_path: Path) -> dict[str, tuple[float, np.ndarray]]:
+    """Carga la caché desde un archivo JSON de forma segura."""
     if not cache_path.is_file():
         return {}
     try:
-        with open(cache_path, "rb") as f:
-            data = pickle.load(f)
-            return data if isinstance(data, dict) else {}
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            # Convertir listas de vuelta a numpy arrays
+            return {
+                k: (v[0], np.array(v[1], dtype=np.float32))
+                for k, v in data.items()
+            }
     except Exception:
         return {}
 
 
 def save_cache(cache_path: Path, data: dict[str, tuple[float, np.ndarray]]) -> None:
+    """Guarda la caché en formato JSON, convirtiendo arrays a listas."""
     tmp = cache_path.with_suffix(".tmp")
-    with open(tmp, "wb") as f:
-        pickle.dump(data, f, protocol=4)
+    # Convertir numpy arrays a listas para JSON
+    serializable = {
+        k: (v[0], v[1].tolist())
+        for k, v in data.items()
+    }
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, indent=2)
     tmp.replace(cache_path)

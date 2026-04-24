@@ -97,13 +97,18 @@ def find_matches(
     need_save = rebuild_cache
 
     for imp in images:
+        # Usar ruta relativa para la caché (Portabilidad y Privacidad)
+        try:
+            rel_path = imp.relative_to(db)
+            key = str(rel_path.as_posix())
+        except ValueError:
+            # Si por alguna razón no es relativa, usar el nombre
+            key = imp.name
+        
         if imp.resolve() == query.resolve():
-            continue
-        if imp.suffix.lower() == ".onnx":
             continue
         
         mtime = imp.stat().st_mtime
-        key = str(imp.resolve())
         entry = cache.get(key)
         feat: np.ndarray | None = None
         
@@ -236,7 +241,13 @@ def run_search(
         return 1
 
     for i, res in enumerate(results):
-        print(f"{i + 1}.  dist={res['distance']:.4f}  {res['metric']}  {res['path'].resolve()}")
+        # Mostrar ruta relativa para mayor privacidad en la consola
+        try:
+            display_path = res["path"].relative_to(data["db"])
+        except ValueError:
+            display_path = res["path"].name
+            
+        print(f"{i + 1}.  dist={res['distance']:.4f}  {res['metric']}  {display_path}")
 
     return 0
 
