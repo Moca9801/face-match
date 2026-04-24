@@ -17,7 +17,7 @@ MODELS_BASE = "https://github.com/opencv/opencv_zoo/raw/main/models"
 YUNET_NAME = "face_detection_yunet/face_detection_yunet_2023mar.onnx"
 SFACE_NAME = "face_recognition_sface/face_recognition_sface_2021dec.onnx"
 
-# Hashes SHA256 oficiales para garantizar integridad y seguridad
+# Official SHA256 hashes to ensure integrity and security
 MODEL_HASHES = {
     "face_detection_yunet_2023mar.onnx": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
     "face_recognition_sface_2021dec.onnx": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
@@ -52,15 +52,15 @@ def ensure_model(filename: str) -> Path:
     path = get_models_dir() / name
     expected_hash = MODEL_HASHES.get(name)
 
-    # Si el archivo existe, verificar integridad antes de usarlo
+    # If the file exists, verify integrity before using it
     if path.is_file():
         if expected_hash and _calculate_sha256(path) == expected_hash:
             return path
         else:
-            print(f"Modelo '{name}' corrupto o antiguo. Redescargando...", file=sys.stderr)
+            print(f"Model '{name}' corrupt or old. Redownloading...", file=sys.stderr)
 
     url = f"{MODELS_BASE}/{filename}"
-    print(f"Descargando modelo: {name} (puede tardar)...", file=sys.stderr)
+    print(f"Downloading model: {name} (this may take a while)...", file=sys.stderr)
     part = path.with_suffix(path.suffix + ".part")
     try:
         with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310
@@ -72,17 +72,15 @@ def ensure_model(filename: str) -> Path:
                     f.write(chunk)
     except Exception as exc:
         part.unlink(missing_ok=True)
-        raise RuntimeError(f"Error descargando '{name}': {exc}") from exc
+        raise RuntimeError(f"Error downloading '{name}': {exc}") from exc
 
-    # Verificación de integridad por Hash
+    # Hash integrity verification
     if expected_hash:
         actual_hash = _calculate_sha256(part)
         if actual_hash != expected_hash:
             part.unlink(missing_ok=True)
-            raise RuntimeError(
-                f"Error de integridad en '{name}': El hash no coincide. "
-                "La descarga podría haber sido interceptada o estar incompleta."
-            )
+                f"Integrity error in '{name}': Hash mismatch. "
+                "The download might have been intercepted or is incomplete."
 
     part.replace(path)
     return path
@@ -128,13 +126,13 @@ def embed(
 
 
 def load_cache(cache_path: Path) -> dict[str, tuple[float, np.ndarray]]:
-    """Carga la caché desde un archivo JSON de forma segura."""
+    """Load the embeddings cache from a JSON file safely."""
     if not cache_path.is_file():
         return {}
     try:
         with open(cache_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # Convertir listas de vuelta a numpy arrays
+            # Convert lists back to numpy arrays
             return {
                 k: (v[0], np.array(v[1], dtype=np.float32))
                 for k, v in data.items()
@@ -144,9 +142,9 @@ def load_cache(cache_path: Path) -> dict[str, tuple[float, np.ndarray]]:
 
 
 def save_cache(cache_path: Path, data: dict[str, tuple[float, np.ndarray]]) -> None:
-    """Guarda la caché en formato JSON, convirtiendo arrays a listas."""
+    """Save the embeddings cache to a JSON file, converting arrays to lists."""
     tmp = cache_path.with_suffix(".tmp")
-    # Convertir numpy arrays a listas para JSON
+    # Convert numpy arrays to lists for JSON serialization
     serializable = {
         k: (v[0], v[1].tolist())
         for k, v in data.items()

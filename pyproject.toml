@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "face-match"
+name = "moca-face-matcher"
 version = "0.2.0"
-description = "Búsqueda de coincidencias faciales ultra rápida (OpenCV YuNet + SFace + FAISS)."
+description = "Ultra-fast face matching (OpenCV YuNet + SFace + FAISS)."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"

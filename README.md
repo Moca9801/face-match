@@ -1,139 +1,140 @@
-# face-match
+# moca-face-matcher
 
-**English (summary):** Small, dependency-light CLI to find the most **visually similar faces** in a folder of images (OpenCV YuNet + SFace). It does **not** prove legal identity, is not a certified biometric system, and must be used with a clear legal basis and governance. See **Disclaimer** below.
+[![PyPI version](https://img.shields.io/pypi/v/moca-face-matcher.svg)](https://pypi.org/project/moca-face-matcher/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+**Ultra-fast face matching** library using OpenCV's YuNet for detection, SFace for recognition, and FAISS for high-performance vector search. Designed as both a production-grade SDK and a powerful CLI tool.
 
 ---
 
-## Qué es
+## Features
 
-Herramienta de línea de comandos que, dada una **foto de consulta**, recorre una **carpeta de imágenes** (incluye subcarpetas), detecta rostros y ordena las fotos por **similitud** al rostro de la consulta. Pensada como base técnica para integraciones (no sustituye un producto completo de control de acceso o RR.HH.).
+- **Blazing Fast**: Integrated with **FAISS** for near-instant search in large databases.
+- **State-of-the-Art Models**: Uses YuNet (fastest detection) and SFace (robust recognition).
+- **GPU Ready**: Hardware acceleration support via OpenCV DNN/CUDA.
+- **Developer First**: Clean SDK interface with strict type hinting (Mypy) and JSON-based secure cache.
+- **Secure by Design**: Automatic SHA-256 model verification and no insecure serialization (no `pickle`).
+- **Portable Cache**: Uses relative paths in the JSON cache, making it portable across different machines.
 
-## Requisitos
+## Requirements
 
-- Python 3.9 o superior
-- Conexión a Internet la **primera vez** (descarga ~40 MB de modelos ONNX de [OpenCV Zoo](https://github.com/opencv/opencv_zoo); luego quedan en caché local)
+- Python 3.9 or superior.
+- Internet connection for the **first run** (downloads ~40 MB of ONNX models from [OpenCV Zoo](https://github.com/opencv/opencv_zoo)).
 
-## Instalación
+## Installation
 
+```bash
+pip install moca-face-matcher
+```
+
+*For local development:*
 ```bash
 git clone https://github.com/Moca9801/face-match.git
 cd face-match
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-Instalación solo de ejecución (sin tests):
+## Usage
 
+### Command Line Interface (CLI)
+
+Search for a face in a gallery folder:
 ```bash
-pip install .
+face-match path/to/query.jpg --db path/to/gallery/
 ```
 
-## Uso
+### Library Usage (SDK)
 
-1. Coloca las imágenes de la galería en la carpeta `database` del directorio actual **o** indica otra con `--db`.
-2. Ejecuta:
-
-```bash
-# Búsqueda estándar (usa umbral por defecto 0.363 para coseno)
-face-match consulta.jpg
-
-# Búsqueda en una carpeta específica con más resultados
-face-match consulta.jpg --db C:\ruta\galeria -n 20
-
-# Búsqueda estricta (solo coincidencias muy altas)
-face-match consulta.jpg --threshold 0.5
-
-# Reconstruir la base de datos (ignorar caché)
-face-match consulta.jpg --rebuild
-```
-
-## Uso como Librería (SDK)
-
-Puedes integrar el motor de búsqueda en tus propios scripts para recibir resultados estructurados (diccionarios y listas) sin ensuciar la consola:
+The core function is `find_matches`. It returns a structured dictionary and does not print to the console, making it ideal for integration into other systems.
 
 ```python
 from pathlib import Path
 from face_match import find_matches
 
-# Ejecutar búsqueda programática
-data = find_matches(
-    query=Path("rostro.jpg"),
-    db=Path("./galeria"),
-    top=5,
+results = find_matches(
+    query=Path("query.jpg"),
+    db=Path("./gallery"),
+    top=3,
     threshold=0.4
 )
 
-print(f"Escaneadas: {data['total_scanned']} fotos")
-for res in data["results"]:
-    print(f"Coincidencia: {res['path']} (Distancia: {res['distance']:.4f})")
+print(f"Scanned {results['total_scanned']} images.")
+for match in results['results']:
+    print(f"Match found: {match['path']} (Distance: {match['distance']})")
 ```
 
-Opciones:
+### CLI vs SDK Mapping
 
-| Opción (CLI) | Parámetro (SDK) | Atajo | Descripción |
-|--------------|-----------------|-------|-------------|
-| `query`      | `query`         | -     | Imagen con el rostro a buscar (obligatorio) |
-| `--db`       | `db`            | -     | Carpeta de la galería (por defecto `./database`) |
-| `--top`      | `top`           | `-n`  | Máximo de resultados (por defecto 10) |
-| `--threshold`| `threshold`     | `-t`  | Umbral de similitud (def: 0.363 / 1.128) |
-| `--metric`   | `distance`      | -     | `cosine` (0) o `l2` (1) |
-| `--device`   | `device`        | -     | `cpu` o `gpu` |
-| `--rebuild`  | `rebuild_cache` | -     | Ignora la caché y vuelve a extraer embeddings |
+| CLI Option | SDK Parameter (`find_matches`) | Description |
+| :--- | :--- | :--- |
+| `query` | `query` (Path) | Path to the query image. |
+| `--db` | `db` (Path) | Path to the gallery/database folder. |
+| `--top` | `top` (int) | Number of results to return. |
+| `--metric` | `distance` (int) | `0` for Cosine (default), `1` for L2. |
+| `--threshold`| `threshold` (float)| Similarity threshold. |
+| `--device` | `device` (str) | `cpu` (default) or `gpu`. |
+| `--rebuild` | `rebuild_cache` (bool) | Force rescan of all images. |
 
-### ¿Cuándo usar CPU vs GPU?
+---
 
-El sistema es muy eficiente por defecto, pero puedes optimizarlo según tu hardware:
+## Technical Details
 
-*   **Usar CPU (Por defecto):**
-    *   Galerías pequeñas o medianas (< 10,000 fotos).
-    *   Si no tienes una tarjeta NVIDIA configurada con CUDA.
-    *   Para uso general en laptops, ya que consume menos energía.
-*   **Usar GPU (`--device gpu`):**
-    *   Galerías masivas (> 100,000 fotos).
-    *   Cuando realizas un escaneo inicial pesado (`--rebuild`) y tienes una tarjeta NVIDIA.
-    *   **Nota:** Requiere drivers de NVIDIA instalados y que las librerías (`opencv-python` con CUDA y `faiss-gpu`) sean compatibles con tu sistema. Si pides `gpu` y no está disponible, el sistema hará un *fallback* automático a `cpu`.
+### Metrics and Thresholds
+The library uses predefined thresholds based on the SFace model's official recommendations:
+- **Cosine Similarity** (`--metric coseno`): Matches range from `-1` to `1`. Higher is better. Recommended threshold: `0.363`.
+- **L2 Distance** (`--metric l2`): Matches start from `0`. Lower is better. Recommended threshold: `1.128`.
 
-### Cómo interpretar los resultados
-
-Este sistema soporta dos métricas de comparación:
-
-- **Métrica Coseno (Recomendada):** Los valores suelen ir de 0 a 1. **Mayor es mejor**. Un valor > 0.363 suele indicar que es la misma persona.
-- **Métrica L2 (Norma):** Distancia euclídea entre vectores. **Menor es mejor**. Un valor < 1.128 suele indicar coincidencia.
-
-### Caché y Estabilidad
-
-- **Caché Inteligente:** Se genera `.face_embeddings_cache.json` en la carpeta `--db`. Solo se recalculan las fotos modificadas, permitiendo búsquedas en milisegundos.
-- **Descarga Segura:** Los modelos ONNX se descargan de [OpenCV Zoo](https://github.com/opencv/opencv_zoo) con validación de integridad y timeouts para mayor fiabilidad.
-
-
-## Desarrollo
-
+### Development and Testing
+Contributors are welcome! To run quality checks locally:
 ```bash
-pip install -e ".[dev]"
+# Run Linting
+ruff check src tests
+
+# Run Type Checking
+mypy src/face_match
+
+# Run Tests
 pytest
 ```
 
-### Seguridad y Privacidad de Datos
+---
+
+## Security and Data Privacy
 
 > [!CAUTION]
-> **Datos Biométricos en Disco**: El archivo `.face_embeddings_cache.json` generado en la carpeta de la base de datos contiene representaciones matemáticas de rostros (embeddings) y **rutas relativas** de archivos de la galería. 
-> - **No compartas** este archivo.
-> - Trátalo como información confidencial según las leyes de protección de datos de tu región.
-> - La caché es en formato JSON (seguro) para evitar riesgos de ejecución de código, pero el acceso al archivo debe estar restringido mediante permisos de sistema.
+> **Biometric Data on Disk**: The `.face_embeddings_cache.json` file generated in your database folder contains mathematical representations (embeddings) and **relative file paths**.
+> - **Do not share** this file.
+> - Treat it as sensitive personal data.
+> - Access to the file should be restricted using system-level permissions.
 
-## Aviso legal, privacidad y uso responsable
+## Disclaimer
 
-- El **reconocimiento facial** y los **datos biométricos** están sometidos a leyes estrictas en muchos países (p. ej. RGPD en la UE, leyes locales en Latinoamérica). **No uses** este software sin base legal clara, política de privacidad, minimización de datos y, donde proceda, **consentimiento informado** de las personas afectadas.
-- Esta herramienta devuelve **similitud visual** entre fotos, **no** certifica identidad ni debería usarse como única prueba en empleo, vigilancia o procesos judiciales sin controles humanos y procedimientos definidos por tu organización y asesoría jurídica.
-- Los **falsos positivos** (personas distintas con rostro parecido) y **falsos negativos** son posibles; la iluminación, calidad, edad, accesorios y sesgos del modelo afectan el resultado.
-- Los autores no se hacen responsables del uso que terceros hagan del software; se ofrece **«tal cual»** según la licencia MIT.
+- This software is **not** a certified biometric identification system.
+- It is intended for research and low-risk identification tasks.
+- The author is not responsible for misuse or legal implications of using biometric data.
 
-## Licencia
+---
 
-MIT — ver [LICENSE](LICENSE).
+# Versión en Español (Resumen)
 
-## Créditos
+**moca-face-matcher** es una librería de búsqueda de coincidencias faciales ultra rápida.
 
-- Detección y reconocimiento basados en modelos publicados en [OpenCV Zoo](https://github.com/opencv/opencv_zoo) (YuNet, SFace).
+## Instalación rápida
+```bash
+pip install moca-face-matcher
+```
+
+## Características
+- Búsqueda vectorial con FAISS.
+- Modelos YuNet + SFace.
+- Soporte para GPU.
+- Caché segura en JSON con rutas relativas.
+
+## Seguridad
+Este software maneja datos biométricos. El archivo de caché `.face_embeddings_cache.json` es sensible y **no debe ser compartido**. 
+
+---
+
+## License
+Distributed under the **MIT License**. See `LICENSE` for more information.

@@ -10,41 +10,44 @@ from face_match.search import run_search
 def main() -> int:
     default_db = Path.cwd() / "database"
     parser = argparse.ArgumentParser(
-        description="Encuentra fotos con rostros similares a una imagen de consulta."
+        description="Find photos with faces similar to a query image."
     )
-    parser.add_argument("query", type=Path, help="Imagen con el rostro a buscar.")
+    parser.add_argument("query", type=Path, help="Path to the query image")
     parser.add_argument(
         "--db",
         type=Path,
         default=default_db,
-        help=f"Carpeta con la galería (recursivo). Por defecto: {default_db} (carpeta actual).",
+        help=f"Path to the gallery folder. Default: {default_db}",
     )
     parser.add_argument(
-        "-n", "--top", type=int, default=10, help="Máximo de resultados a listar."
+        "-n", "--top", type=int, default=5, help="Number of results to show"
     )
     parser.add_argument(
         "--metric",
         choices=["cosine", "l2"],
         default="cosine",
-        help="Distancia entre vectores (por defecto cosine / FR_COSINE).",
+        help="Similarity metric",
     )
     parser.add_argument(
         "-t",
         "--threshold",
         type=float,
         default=None,
-        help="Umbral mínimo de similitud. Recomendado: cosine=0.363, l2=1.128.",
+        help="Similarity threshold. Recommended: cosine=0.363, l2=1.128.",
     )
     parser.add_argument(
         "--device",
         choices=["cpu", "gpu"],
         default="cpu",
-        help="Dispositivo (cpu/gpu). Requiere drivers compatibles.",
+        help="Execution device",
     )
     parser.add_argument(
         "--rebuild",
         action="store_true",
-        help="Ignora caché y vuelve a extraer descriptores de toda la base.",
+        help="Rebuild the entire cache",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"face-match {__version__}"
     )
     args = parser.parse_args()
     dist = 0 if args.metric == "cosine" else 1
@@ -56,13 +59,13 @@ def main() -> int:
         # Validar rango según la métrica seleccionada
         if dist == 0 and not (0.0 <= threshold <= 1.0):
             parser.error(
-                f"--threshold {threshold!r} fuera de rango para coseno. "
-                "Debe estar entre 0.0 y 1.0 (ej. 0.363)."
+                f"--threshold {threshold!r} out of range for cosine. "
+                "Must be between 0.0 and 1.0 (e.g., 0.363)."
             )
         elif dist == 1 and threshold <= 0.0:
             parser.error(
-                f"--threshold {threshold!r} inválido para L2. "
-                "Debe ser un número positivo (ej. 1.128)."
+                f"--threshold {threshold!r} invalid for L2. "
+                "Must be a positive number (e.g., 1.128)."
             )
 
     return run_search(

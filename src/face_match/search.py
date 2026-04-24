@@ -50,19 +50,19 @@ def find_matches(
     device: str = "cpu",
 ) -> SearchResponse:
     """
-    Realiza una búsqueda de rostros y devuelve los resultados como estructura de datos.
-    
+    Search for the most similar faces in a database folder.
+
     Args:
-        query: Ruta a la imagen de consulta.
-        db: Ruta a la carpeta de la galería.
-        top: Máximo de resultados a devolver.
-        distance: 0 para Coseno, 1 para L2.
-        rebuild_cache: Si es True, ignora el archivo de caché JSON existente.
-        threshold: Umbral de similitud (opcional, usa valores por defecto si es None).
-        device: "cpu" o "gpu".
+        query: Path to the query image.
+        db: Path to the gallery/database folder.
+        top: Maximum number of results to return.
+        distance: 0 for Cosine similarity, 1 for L2 distance.
+        rebuild_cache: If True, ignores existing JSON cache and rescans all images.
+        threshold: Similarity threshold (optional, uses defaults if None).
+        device: Execution device, "cpu" or "gpu".
 
     Returns:
-        Un diccionario con metadatos y una lista de resultados ordenados.
+        A dictionary containing metadata and a list of sorted results.
     """
     if threshold is None:
         threshold = 0.363 if distance == 0 else 1.128
@@ -73,7 +73,7 @@ def find_matches(
 
     q_img = load_bgr(query)
     if q_img is None:
-        raise ValueError(f"No se pudo leer la imagen de consulta: {query.name}")
+        raise ValueError(f"Could not read the query image: {query.name}")
         
     h0, w0 = q_img.shape[:2]
     detector = cv2.FaceDetectorYN.create(str(det_path), "", (w0, h0), 0.9, 0.3, 5000, 0, 0)
@@ -87,7 +87,7 @@ def find_matches(
 
     q_feat = embed(q_img, detector, recognizer)
     if q_feat is None:
-        raise ValueError("No se detectó ningún rostro en la imagen de consulta.")
+        raise ValueError("No face detected in the query image.")
 
     cache_path = db / CACHE_NAME
     cache: dict[str, tuple[float, np.ndarray]] = load_cache(cache_path) if not rebuild_cache else {}
@@ -97,12 +97,12 @@ def find_matches(
     need_save = rebuild_cache
 
     for imp in images:
-        # Usar ruta relativa para la caché (Portabilidad y Privacidad)
+        # Use relative path for cache (Portability & Privacy)
         try:
             rel_path = imp.relative_to(db)
             key = str(rel_path.as_posix())
         except ValueError:
-            # Si por alguna razón no es relativa, usar el nombre
+            # If not relative for some reason, use the filename
             key = imp.name
         
         if imp.resolve() == query.resolve():
@@ -220,28 +220,32 @@ def run_search(
 
     results = data["results"]
     metric_name = data["metric"]
-    desc = "valores mayores = más parecido" if distance == 0 else "valores menores = más parecido"
-
+    
     print()
-    print(f"Consulta: {data['query'].name}")
+    print(f"Query: {data['query'].name}")
     print(
-        f"Base: {data['db'].name}  "
-        f"({data['total_scanned']} imágenes escaneadas, "
-        f"{data['with_face']} con rostro detectado, "
-        f"{len(results)} resultados devueltos)"
+        f"Database: {data['db'].name}  "
+        f"({data['total_scanned']} images scanned, "
+        f"{data['with_face']} with faces detected, "
+        f"{len(results)} results returned)"
     )
-    print(f"Métrica: {metric_name} ({desc}) [Motor: {data['engine']} {data['device']}]")
+    
+    engine = data.get("engine", "FAISS")
+    device = data.get("device", "CPU")
+    desc = "higher values = more similar" if metric_name == "coseno" else "lower values = more similar"
+    
+    print(f"Metric: {metric_name} ({desc}) [Engine: {engine} {device}]")
     print()
 
     if not results:
         print(
-            f"Sin coincidencias. Ninguna imagen superó el umbral de similitud ({data['threshold']:.3f}).",
+            f"No matches found. None of the images exceeded the similarity threshold ({data['threshold']:.3f}).",
             file=sys.stderr,
         )
         return 1
 
     for i, res in enumerate(results):
-        # Mostrar ruta relativa para mayor privacidad en la consola
+        # Show relative path for privacy
         try:
             display_path = str(res["path"].relative_to(data["db"]))
         except ValueError:
