@@ -243,7 +243,7 @@ def run_search(
     for i, res in enumerate(results):
         # Mostrar ruta relativa para mayor privacidad en la consola
         try:
-            display_path = res["path"].relative_to(data["db"])
+            display_path = str(res["path"].relative_to(data["db"]))
         except ValueError:
             display_path = res["path"].name
             
